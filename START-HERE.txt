@@ -1,0 +1,9 @@
+BẮT ĐẦU NHANH
+
+1. Để đưa lên GitHub Pages: tải toàn bộ các file trong thư mục này lên repository.
+2. Vào Settings > Pages > Deploy from a branch > main / root.
+3. Mở đường dẫn GitHub Pages.
+4. Dùng sample-dg.csv + sample-products-a.csv + sample-products-b.csv để thử.
+5. File mẫu mặc định là BM-QC-26-template.xlsx, lấy từ đúng file BM - QC - 26 (xuất hàng)(1).xlsx.
+
+Nếu mở index.html trực tiếp mà trình duyệt không tự đọc được file mẫu, tại Tuỳ chọn xuất hãy chọn BM-QC-26-template.xlsx.

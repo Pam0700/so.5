@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b63d8">
+  <meta name="description" content="Xử lý dữ liệu xuất hàng theo Ship → Code → Sản phẩm và xuất vào đúng biểu mẫu BM-QC-26.">
+  <title>Xử lý xuất hàng V7 nâng cấp</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="vendor-jszip.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <button id="menuButton" class="icon-button" type="button" aria-label="Mở menu">☰</button>
+    <div class="logo">XL</div>
+    <div class="brand">
+      <strong>Xử lý dữ liệu xuất hàng</strong>
+      <span>V7 nâng cấp · dùng đúng BM-QC-26 (xuất hàng)(1)</span>
+    </div>
+    <span id="templateBadge" class="badge ok">Mẫu sẵn sàng</span>
+  </header>
+
+  <div id="backdrop" class="backdrop hidden"></div>
+  <aside id="drawer" class="drawer hidden">
+    <div class="drawer-head"><strong>Menu</strong><button id="closeMenu" class="text-button" type="button">Đóng</button></div>
+    <nav>
+      <button class="nav-button active" data-screen="export" type="button">Xuất báo cáo</button>
+      <button class="nav-button" data-screen="errors" type="button">Kiểm tra lỗi</button>
+      <button class="nav-button" data-screen="normalize" type="button">Chuẩn hoá tên</button>
+      <button class="nav-button" data-screen="settings" type="button">Cài đặt</button>
+    </nav>
+  </aside>
+
+  <main class="container">
+    <section id="screen-export" class="screen active">
+      <div class="page-title"><div><span class="eyebrow">Menu chính</span><h1>Xuất báo cáo</h1></div><button id="resetButton" class="text-button" type="button">Làm mới</button></div>
+
+      <article class="card">
+        <div class="step-title"><span>1</span><div><h2>Tải dữ liệu</h2><p>DG: Code, Tên khách, Điểm giao, Ship. Sản phẩm: Code, Tên sản phẩm.</p></div></div>
+        <div class="upload-grid">
+          <label class="upload-box">
+            <input id="dgFile" type="file" accept=".xlsx,.csv">
+            <b>File DG</b><small id="dgFileName">Chọn một file</small>
+          </label>
+          <label class="upload-box">
+            <input id="productFiles" type="file" accept=".xlsx,.csv" multiple>
+            <b>Nhiều file sản phẩm</b><small id="productFileName">Có thể chọn nhiều file</small>
+          </label>
+        </div>
+        <div class="notice">Tự tìm hàng tiêu đề · Code trùng nhưng tên sản phẩm khác nhau vẫn lấy đủ · Chỉ xoá dòng trùng hoàn toàn Code + Tên sản phẩm.</div>
+      </article>
+
+      <article class="card">
+        <div class="step-title"><span>2</span><div><h2>Chọn Ship</h2><p>Danh sách được ẩn gọn; mở để tìm kiếm và chọn.</p></div></div>
+        <button id="shipToggle" class="picker-button" type="button">Chọn Ship <span id="shipSummary">0 đã chọn</span></button>
+        <div id="shipPanel" class="ship-panel hidden">
+          <div class="toolbar"><input id="shipSearch" type="search" placeholder="Tìm mã Ship..."><button id="selectAllButton" class="secondary" type="button">Chọn tất cả</button><button id="clearShipButton" class="secondary" type="button">Bỏ chọn</button></div>
+          <div id="shipList" class="ship-list empty">Chưa đọc dữ liệu.</div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="step-title"><span>3</span><div><h2>Xuất vào biểu mẫu</h2><p>Điền tên khách + điểm giao ở cột J và danh sách sản phẩm ở cột K.</p></div></div>
+        <div class="metric-grid">
+          <div class="metric"><small>Khách hàng</small><b id="customerCount">0</b></div>
+          <div class="metric"><small>Sản phẩm</small><b id="productCount">0</b></div>
+          <div class="metric"><small>Form dự kiến</small><b id="formCount">0</b></div>
+        </div>
+        <div class="rule">Sắp xếp: <strong>5kg → 2kg → 1kg → Khay → TF → 500g → nhóm khác</strong></div>
+        <details>
+          <summary>Tuỳ chọn xuất</summary>
+          <div class="form-grid">
+            <label>Chế độ nhiều Ship<select id="multiShipMode"><option value="combined">Gộp chung một file</option><option value="separate">Tách từng Ship và đóng ZIP</option></select></label>
+            <label>Mẫu Excel tuỳ chọn<input id="templateFile" type="file" accept=".xlsx"></label>
+          </div>
+          <p class="help">Mặc định app dùng file mẫu kèm trong thư mục. Chỉ chọn mẫu khác khi cần thay thế.</p>
+        </details>
+        <button id="exportButton" class="primary" type="button">Xuất Excel đúng biểu mẫu</button>
+        <div id="progress" class="progress hidden"><div><span id="progressText">Đang xử lý</span><span id="progressPercent">0%</span></div><div class="track"><i id="progressBar"></i></div></div>
+        <div id="status" class="status hidden" aria-live="polite"></div>
+      </article>
+    </section>
+
+    <section id="screen-errors" class="screen">
+      <div class="page-title"><div><span class="eyebrow">Kiểm tra dữ liệu</span><h1>Kiểm tra lỗi</h1></div><button id="downloadErrors" class="secondary" type="button">Tải CSV lỗi</button></div>
+      <div class="metric-grid"><div class="metric danger"><small>Cần sửa</small><b id="criticalCount">0</b></div><div class="metric warning"><small>Cảnh báo</small><b id="warningCount">0</b></div><div class="metric"><small>Tổng</small><b id="totalErrorCount">0</b></div></div>
+      <article class="card"><div id="errorList" class="error-list empty">Chưa có dữ liệu kiểm tra.</div></article>
+    </section>
+
+    <section id="screen-normalize" class="screen">
+      <div class="page-title"><div><span class="eyebrow">Danh mục dùng lại</span><h1>Chuẩn hoá tên khách</h1></div></div>
+      <article class="card">
+        <p>Nhập mỗi dòng theo cấu trúc: <b>Tên đầy đủ =&gt; Tên rút gọn</b>.</p>
+        <textarea id="mappingText" rows="12" placeholder="Công ty TNHH ABC Farm => ABC Farm\nHợp tác xã Nông nghiệp XYZ => HTX XYZ"></textarea>
+        <div class="button-row"><button id="saveMapping" class="primary" type="button">Lưu bảng chuẩn hoá</button><button id="clearMapping" class="secondary" type="button">Xoá bảng</button></div>
+        <div id="mappingStatus" class="status hidden"></div>
+      </article>
+    </section>
+
+    <section id="screen-settings" class="screen">
+      <div class="page-title"><div><span class="eyebrow">Thiết lập</span><h1>Cài đặt</h1></div></div>
+      <article class="card settings">
+        <label class="switch-row"><span><b>Chuẩn hoá tên khách</b><small>Dùng bảng tên rút gọn khi xuất.</small></span><input id="normalizeToggle" type="checkbox" checked></label>
+        <label class="switch-row"><span><b>Xoá chữ VietGAP</b><small>Không phân biệt chữ hoa, chữ thường.</small></span><input id="vietgapToggle" type="checkbox" checked></label>
+        <label class="switch-row"><span><b>Loại bỏ sản phẩm trùng hoàn toàn</b><small>Code trùng khác tên vẫn hợp lệ.</small></span><input id="dedupeToggle" type="checkbox" checked></label>
+        <button id="saveSettings" class="primary" type="button">Lưu cài đặt</button>
+      </article>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="app.js"></script>
+</body>
+</html>
